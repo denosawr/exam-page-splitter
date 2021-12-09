@@ -8,7 +8,7 @@ pdfrw = "*"
 pdfminer = "*"
 
 [scripts]
-split = "python src/splitter.py"
+split = "python src/main.py"
 
 [dev-packages]
 black = "*"

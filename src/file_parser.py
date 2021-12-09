@@ -1,13 +1,12 @@
-import re
 import functools
-from dataclasses import dataclass
+import re
 import typing
+from dataclasses import dataclass
 
-from pdfminer.layout import LAParams, LTTextLineHorizontal, LTComponent
-from pdfminer.pdfpage import PDFPage
-from pdfminer.pdfinterp import PDFResourceManager
-from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.converter import PDFPageAggregator
+from pdfminer.layout import LAParams, LTComponent, LTTextLineHorizontal
+from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
+from pdfminer.pdfpage import PDFPage
 
 # https://stackoverflow.com/questions/22898145/how-to-extract-text-and-text-coordinates-from-a-pdf-file
 
@@ -57,6 +56,7 @@ class PDFTextFinder:
                 layout, regex=matching_regex, depth=0, collection=results, page=idx
             )
 
+        print("x1  y1  x2  y2   text")
         return functools.reduce(
             _page_scan, enumerate(self.pages), typing.cast(list[MatchLTTextLine], [])
         )
