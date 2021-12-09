@@ -6,18 +6,7 @@ import typing
 import PyPDF2
 from PyPDF2.pdf import PageObject
 
-"""
-Reverse imposing:
---A3--         --A4--
-[12| 1]         [1]
-[ 2|11]         [2]
-[10| 3]    =>   [3]
-  ...           ...
-[ 6| 7]         [6]
-                [7]
-                ...
-               [12]
-"""
+from question_splitter import Viewport
 
 __import__("pypdf2_patch").patch()
 
@@ -27,7 +16,9 @@ def copy_PageObject(page: PageObject) -> PageObject:
 
     copied_page = copy.copy(page)
     for attr in {"trimBox", "mediaBox", "cropBox"}:
-        copied_page[attr] = copy.copy(page[attr])  # type: ignore
+        existing_attr = getattr(page, attr, None)
+        if existing_attr:
+            setattr(copied_page, attr, copy.copy(existing_attr))
     return copied_page
 
 
@@ -91,12 +82,30 @@ def split_pages(src: str, dst: str) -> None:
     dst_f.close()
 
 
-if len(sys.argv) < 3:
-    print("\nusage:\n$ python reverse_impose.py input.pdf output.pdf")
-    sys.exit()
+def extract_viewport(
+    page: PageObject,
+    viewport: Viewport,
+    page_size: tuple[float, float] = (595.32, 842.04),
+) -> PageObject:
 
-input_file = sys.argv[1]
-output_file = sys.argv[2]
+    new_page = PageObject.createBlankPage(width=page_size[0], height=page_size[1])  # type: ignore
 
-print("Hello", sys.argv)
-split_pages(input_file, output_file)
+    trimmed_page = copy_PageObject(page)
+    trimmed_page.trimBox.lowerLeft = (0, viewport.y2)
+    trimmed_page.trimBox.upperRight = (page_size[0], viewport.y1)
+
+    new_page.mergePage(trimmed_page)
+
+    return new_page
+
+
+def main():
+    if len(sys.argv) < 3:
+        print("\nusage:\n$ python reverse_impose.py input.pdf output.pdf")
+        sys.exit()
+
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+
+    print("Hello", sys.argv)
+    split_pages(input_file, output_file)
