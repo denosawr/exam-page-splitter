@@ -9,6 +9,8 @@ from pdfminer.pdfinterp import PDFResourceManager
 from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.converter import PDFPageAggregator
 
+# https://stackoverflow.com/questions/22898145/how-to-extract-text-and-text-coordinates-from-a-pdf-file
+
 
 LTObject = typing.Union[LTComponent, PDFPage]
 
@@ -20,7 +22,7 @@ class MatchLTTextLine:
     y1: float
     y2: float
     page: int  # page index starting at 0
-    question: int
+    result: str
 
 
 class PDFTextFinder:
@@ -93,14 +95,12 @@ class PDFTextFinder:
 
             if isinstance(o, LTTextLineHorizontal) and results:
                 bbox: tuple[float, float, float, float] = o.bbox
-                num = int(results.group(1))  # regex acts as typeguard
+                num = results.group(1)
 
                 question_box = MatchLTTextLine(*bbox, page, num)
                 collection.append(question_box)
 
-                print(
-                    f"{PDFTextFinder.get_optional_bbox(o)} " f"{question_box.question}"
-                )
+                print(f"{PDFTextFinder.get_optional_bbox(o)} " f"{question_box.result}")
 
         if isinstance(o, typing.Iterable):
             o_casted = typing.cast(typing.Iterable[LTObject], o)

@@ -1,7 +1,17 @@
 # import pdfrw
+from dataclasses import dataclass
+import functools
 import sys
+import typing
+import itertools
 
-from file_parser import PDFTextFinder
+from file_parser import PDFTextFinder, MatchLTTextLine
+
+
+@dataclass
+class Viewport:
+    top_y: float
+    bottom_y: float
 
 
 # convert to command-line (click) later
@@ -13,12 +23,103 @@ import re
 #     print(page)
 #     sys.exit()
 
-SEARCH_FOR_QUESTION_REGEX = re.compile(r"Question (\d)", re.IGNORECASE)
+SEARCH_FOR_QUESTION_REGEX = re.compile(r"Question (\d+)(?! con)", re.IGNORECASE)
+#                            group question number ^ |  ^ negative lookahead for "continued..."
+SEARCH_FOR_NEXT_PAGE_REGEX = re.compile(r"See (next) page", re.IGNORECASE)
+SEARCH_FOR_END_OF_SECTION = re.compile(r"End (of)(?! this booklet)", re.IGNORECASE)
 
 
 print("x1  y1  x2  y2   text")
 from pprint import pprint
 
+pprint
+
 f = PDFTextFinder(file)
-pprint(f.find_matches(SEARCH_FOR_QUESTION_REGEX))
+question_labels = f.find_matches(SEARCH_FOR_QUESTION_REGEX)
+next_page_labels = f.find_matches(SEARCH_FOR_NEXT_PAGE_REGEX)
+end_of_section_labels = f.find_matches(SEARCH_FOR_END_OF_SECTION)
 f.close()
+
+TOP_OF_PAGE = max(k.y2 for k in question_labels)
+BOTTOM_OF_PAGE = min(k.y2 for k in next_page_labels)
+DEFAULT_VIEWPORT = Viewport(TOP_OF_PAGE, BOTTOM_OF_PAGE)
+
+
+@dataclass
+class PageData:
+    page: int
+    viewport: Viewport
+
+
+T = typing.TypeVar("T")
+
+
+def iterate_with_next_item(
+    some_iterable: typing.Iterable[T],
+) -> typing.Iterable[tuple[T, typing.Optional[T]]]:
+    items, nexts = itertools.tee(some_iterable, 2)
+    nexts = itertools.chain(itertools.islice(nexts, 1, None), [None])
+    return zip(items, nexts)
+
+
+def _reduce_func(
+    acc: typing.Mapping[int, PageData],
+    val: tuple[MatchLTTextLine, typing.Optional[MatchLTTextLine]],
+):
+    current_item: MatchLTTextLine = val[0]
+    next_item: typing.Optional[MatchLTTextLine] = val[1]
+
+    if next_item:
+        # check if End of Section is the next "item"
+        def _map_fn(x: MatchLTTextLine) -> bool:
+            return current_item.page <= x.page and next_item.page > x.page  # type: ignore
+
+        label = filter(
+            _map_fn,
+            end_of_section_labels,
+        )
+
+        if value := next(label, False):
+            value = typing.cast(MatchLTTextLine, value)
+
+            value.page += 1
+            next_item = value
+
+    else:  # end of paper
+        next_item = end_of_section_labels[-1]
+        next_item.page += 1
+
+    question_number = int(current_item.result)
+
+    # pages = [PageData(current_item.page, Viewport(current_item.y1, BOTTOM_OF_PAGE))] + [
+    #     PageData(k, DEFAULT_VIEWPORT)
+    #     for k in range(current_item.page + 1, next_item.page)
+    # ]
+
+    # acc = {**acc, question_number: pages}
+
+    acc = {
+        **acc,
+        **{  # first item usually has a custom viewport
+            current_item.page: PageData(
+                question_number, Viewport(current_item.y1, BOTTOM_OF_PAGE)
+            )
+        },
+        **{  # other items
+            page: PageData(question_number, DEFAULT_VIEWPORT)
+            for page in range(current_item.page + 1, next_item.page)
+        },
+    }
+
+    question_number = int(current_item.result)
+
+    return acc
+
+
+values = functools.reduce(
+    _reduce_func,
+    iterate_with_next_item(question_labels),
+    typing.cast(typing.Mapping[int, PageData], {}),
+)
+
+pprint(values)
