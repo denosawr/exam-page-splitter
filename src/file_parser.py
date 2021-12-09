@@ -18,8 +18,8 @@ LTObject = typing.Union[LTComponent, PDFPage]
 @dataclass
 class MatchLTTextLine:
     x1: float
-    x2: float
     y1: float
+    x2: float
     y2: float
     page: int  # page index starting at 0
     result: str

@@ -10,8 +10,8 @@ from file_parser import PDFTextFinder, MatchLTTextLine
 
 @dataclass
 class Viewport:
-    top_y: float
-    bottom_y: float
+    y1: float
+    y2: float
 
 
 # convert to command-line (click) later
@@ -25,6 +25,7 @@ import re
 
 SEARCH_FOR_QUESTION_REGEX = re.compile(r"Question (\d+)(?! con)", re.IGNORECASE)
 #                            group question number ^ |  ^ negative lookahead for "continued..."
+SEARCH_FOR_QUESTION_CONTINUED = re.compile(r"Question (\d+ con)", re.IGNORECASE)
 SEARCH_FOR_NEXT_PAGE_REGEX = re.compile(r"See (next) page", re.IGNORECASE)
 SEARCH_FOR_END_OF_SECTION = re.compile(r"End (of)(?! this booklet)", re.IGNORECASE)
 
@@ -38,10 +39,11 @@ f = PDFTextFinder(file)
 question_labels = f.find_matches(SEARCH_FOR_QUESTION_REGEX)
 next_page_labels = f.find_matches(SEARCH_FOR_NEXT_PAGE_REGEX)
 end_of_section_labels = f.find_matches(SEARCH_FOR_END_OF_SECTION)
+question_continued_labels = f.find_matches(SEARCH_FOR_QUESTION_CONTINUED)
 f.close()
 
 TOP_OF_PAGE = max(k.y2 for k in question_labels)
-BOTTOM_OF_PAGE = min(k.y2 for k in next_page_labels)
+BOTTOM_OF_PAGE = min(k.y2 for k in next_page_labels) if next_page_labels else 0
 DEFAULT_VIEWPORT = Viewport(TOP_OF_PAGE, BOTTOM_OF_PAGE)
 
 
@@ -88,8 +90,14 @@ def _reduce_func(
 
     question_number = int(current_item.result)
 
+    def _determine_viewport(page: int) -> Viewport:
+        label = filter(lambda x: x.page == page, question_continued_labels)  # type: ignore
+        page_top = next(label, DEFAULT_VIEWPORT).y1
+
+        return Viewport(page_top, DEFAULT_VIEWPORT.y2)
+
     pages = [PageData(current_item.page, Viewport(current_item.y1, BOTTOM_OF_PAGE))] + [
-        PageData(k, DEFAULT_VIEWPORT)
+        PageData(k, _determine_viewport(k))
         for k in range(current_item.page + 1, next_item.page)
     ]
 
