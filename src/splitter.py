@@ -63,7 +63,7 @@ def iterate_with_next_item(
 
 
 def _reduce_func(
-    acc: typing.Mapping[int, PageData],
+    acc: typing.Mapping[int, list[PageData]],
     val: tuple[MatchLTTextLine, typing.Optional[MatchLTTextLine]],
 ):
     current_item: MatchLTTextLine = val[0]
@@ -71,11 +71,8 @@ def _reduce_func(
 
     if next_item:
         # check if End of Section is the next "item"
-        def _map_fn(x: MatchLTTextLine) -> bool:
-            return current_item.page <= x.page and next_item.page > x.page  # type: ignore
-
         label = filter(
-            _map_fn,
+            lambda x: current_item.page <= x.page and next_item.page > x.page,  # type: ignore
             end_of_section_labels,
         )
 
@@ -91,27 +88,12 @@ def _reduce_func(
 
     question_number = int(current_item.result)
 
-    # pages = [PageData(current_item.page, Viewport(current_item.y1, BOTTOM_OF_PAGE))] + [
-    #     PageData(k, DEFAULT_VIEWPORT)
-    #     for k in range(current_item.page + 1, next_item.page)
-    # ]
+    pages = [PageData(current_item.page, Viewport(current_item.y1, BOTTOM_OF_PAGE))] + [
+        PageData(k, DEFAULT_VIEWPORT)
+        for k in range(current_item.page + 1, next_item.page)
+    ]
 
-    # acc = {**acc, question_number: pages}
-
-    acc = {
-        **acc,
-        **{  # first item usually has a custom viewport
-            current_item.page: PageData(
-                question_number, Viewport(current_item.y1, BOTTOM_OF_PAGE)
-            )
-        },
-        **{  # other items
-            page: PageData(question_number, DEFAULT_VIEWPORT)
-            for page in range(current_item.page + 1, next_item.page)
-        },
-    }
-
-    question_number = int(current_item.result)
+    acc = {**acc, question_number: pages}
 
     return acc
 
@@ -119,7 +101,7 @@ def _reduce_func(
 values = functools.reduce(
     _reduce_func,
     iterate_with_next_item(question_labels),
-    typing.cast(typing.Mapping[int, PageData], {}),
+    typing.cast(typing.Mapping[int, list[PageData]], {}),
 )
 
 pprint(values)
