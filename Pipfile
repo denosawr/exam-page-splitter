@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 pdfminer = "*"
 pypdf2 = "*"
+reportlab = "*"
 
 [scripts]
 split = "python src/main.py"
