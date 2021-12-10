@@ -104,7 +104,9 @@ def split_question(file: str) -> typing.Mapping[int, list[PageData]]:
 
     TOP_OF_PAGE = max(k.y2 for k in labels.question)
     BOTTOM_OF_PAGE = min(k.y2 for k in labels.next_page) if labels.next_page else 0
-    DEFAULT_VIEWPORT = Viewport(TOP_OF_PAGE, BOTTOM_OF_PAGE)
+
+    DEFAULT_VIEWPORT = Viewport(TOP_OF_PAGE + 20, BOTTOM_OF_PAGE)
+    # add 20 to the default viewport in case an equation sticks out above the line
 
     values = functools.reduce(
         functools.partial(
