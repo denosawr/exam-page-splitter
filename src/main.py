@@ -1,54 +1,73 @@
 import io
 import sys
-from io import StringIO
 from pathlib import Path
-from pprint import pprint
 
+import click
 import PyPDF2
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+import pdf_splitter
 import question_splitter
 
-# convert to command-line (click) later
-file = sys.argv[1]
-path = Path(file)
 
-results = question_splitter.split_question(file)
+def create_textbox_in_page(
+    text: str, location: tuple[float, float], pagesize: tuple[float, float] = A4
+) -> PyPDF2.pdf.PageObject:
+    packet = io.BytesIO()
+    can = canvas.Canvas(packet, pagesize=pagesize)
 
-pprint(results)
+    can.drawString(*location, text)
+    can.save()
 
-import pdf_splitter
+    packet.seek(0)
 
-src_f = open(file, "rb")
-input_PDF = PyPDF2.PdfFileReader(file)
+    new_pdf = PyPDF2.PdfFileReader(packet)
+    text_page: PyPDF2.pdf.PageObject = new_pdf.getPage(0)
 
-parent = path.parent
-folder = parent / path.stem
-folder.mkdir(exist_ok=True)
+    return text_page
 
-packet = io.BytesIO()
-print(A4)
-can = canvas.Canvas(packet, pagesize=A4)
-can.drawString(55, 790, path.stem)
-can.save()
 
-packet.seek(0)
+@click.command()
+@click.argument("input")
+@click.option(
+    "--output",
+    default=None,
+    help="Folder to output to. Defaults to creating a new folder with the same name as the input file",
+)
+@click.option("--header", default=None, help="The header text of every processed file.")
+def process_file(input: str, output: str, header: str):
+    path = Path(input)
 
-new_pdf = PyPDF2.PdfFileReader(packet)
-textPage: PyPDF2.pdf.PageObject = new_pdf.getPage(0)
+    # create folder
 
-for question, pages in results.items():
-    output = PyPDF2.PdfFileWriter()
-    for page_data in pages:
-        print(question, page_data)
-        p: PyPDF2.pdf.PageObject = input_PDF.getPage(page_data.page)
-        new_page = pdf_splitter.extract_viewport(p, page_data.viewport)
+    if output:
+        folder = Path(output)
+        folder.mkdir(exist_ok=True)
+    else:
+        parent = path.parent
+        folder = parent / path.stem
+        folder.mkdir(exist_ok=True)
 
-        new_page.mergePage(textPage)
+    text_page = create_textbox_in_page(header or path.stem, location=(55, 790))
 
-        output.addPage(new_page)
-    with open(folder / (str(question) + ".pdf"), "wb") as f:
-        output.write(f)
+    # process PDF
+    results = question_splitter.split_question(input)
+    input_PDF = PyPDF2.PdfFileReader(input)
 
-src_f.close()
+    for question, pages in results.items():
+        output_pdf = PyPDF2.PdfFileWriter()
+        for page_data in pages:
+            print(question, page_data)
+            p: PyPDF2.pdf.PageObject = input_PDF.getPage(page_data.page)
+            new_page = pdf_splitter.extract_viewport(p, page_data.viewport)
+
+            new_page.mergePage(text_page)
+
+            output_pdf.addPage(new_page)
+        with open(folder / (str(question) + ".pdf"), "wb") as f:
+            output_pdf.write(f)
+
+
+if __name__ == "__main__":
+    process_file()

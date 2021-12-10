@@ -7,9 +7,10 @@ name = "pypi"
 pdfminer = "*"
 pypdf2 = "*"
 reportlab = "*"
+click = "*"
 
 [scripts]
-split = "python src/main.py"
+main = "python src/main.py"
 
 [dev-packages]
 black = "*"
