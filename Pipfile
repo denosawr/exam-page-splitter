@@ -11,13 +11,15 @@ click = "*"
 pyqt5 = "*"
 
 [scripts]
-main = "python src/main.py"
+cli = "python src/main.py"
+gui = "python src/gui.py"
 
 [dev-packages]
 black = "*"
 pyright = "*"
 pyinstaller = "*"
 pywin32-ctypes = "*"
+pyqt5-stubs = "*"
 
 [requires]
 python_version = "3.10"

@@ -1,9 +1,11 @@
 import sys
-import threading
+import typing
 from pathlib import Path
 
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import *
+
+import main
 
 
 class FileProcessThread(QtCore.QThread):
@@ -11,15 +13,17 @@ class FileProcessThread(QtCore.QThread):
     error_signal = QtCore.pyqtSignal(str)
     files: list[str]
 
-    def __init__(self, files: list[str], callback):
+    def __init__(
+        self, files: list[str], callback: typing.Callable[[str], None]
+    ) -> None:
         super().__init__()
         self.files = files
         self.callback = callback
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.wait()
 
-    def run(self):
+    def run(self) -> None:
         try:
             for idx, file in enumerate(self.files):
                 self.callback(file)
@@ -33,48 +37,47 @@ class FileProcessThread(QtCore.QThread):
 
 
 class EditableList(QListWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: typing.Optional[QWidget] = None) -> None:
         super().__init__(parent)
 
         self.setAcceptDrops(True)
         # self.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
 
-    def dragEnterEvent(self, event):
-        print("event", event.mimeData().hasUrls())
-        if event.mimeData().hasUrls():
-            event.accept()
+    def dragEnterEvent(self, e: QtGui.QDragEnterEvent) -> None:
+        print("event", e.mimeData().hasUrls())
+        if e.mimeData().hasUrls():
+            e.accept()
         else:
-            event.ignore()
+            e.ignore()
 
-    def dropEvent(self, event):
-        print("drop")
-        files = [u.toLocalFile() for u in event.mimeData().urls()]
+    def dropEvent(self, event: QtGui.QDropEvent) -> None:
+        files = [x.toLocalFile() for x in event.mimeData().urls()]
         for f in files:
             self.addEditableItem(f)
 
-    def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.setDropAction(QtCore.Qt.CopyAction)
-            event.accept()
+    def dragMoveEvent(self, e: QtGui.QDragMoveEvent) -> None:
+        if e.mimeData().hasUrls():
+            e.setDropAction(QtCore.Qt.CopyAction)
+            e.accept()
         else:
-            event.ignore()
+            e.ignore()
 
     def keyPressEvent(self, e: QtGui.QKeyEvent) -> None:
         if e.key() in {QtCore.Qt.Key_Delete, QtCore.Qt.Key_Backspace}:
             self.deleteCurrentItem()
 
-    def deleteCurrentItem(self, *args, **kwargs) -> None:
+    def deleteCurrentItem(self, *args, **kwargs) -> None:  # type: ignore
         for item in self.selectedItems():
             self.takeItem(self.row(item))
 
-    def addEditableItem(self, name):
+    def addEditableItem(self, name: str) -> None:
         item = QListWidgetItem(name)
-        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)  # type: ignore
         self.addItem(item)
 
 
 class MainWindow(QWidget):
-    def __init__(self, callback):
+    def __init__(self, callback: typing.Callable[[str], None]) -> None:
         super().__init__()
 
         self.callback = callback
@@ -134,6 +137,7 @@ class MainWindow(QWidget):
         self.setLayout(self.main_layout)
 
     def prompt_file(self, event):
+        print(type(event))
         files, _ = QFileDialog.getOpenFileNames(
             self, "Add PDF files", "", "PDF documents (*.pdf)"
         )
@@ -178,10 +182,14 @@ class MainWindow(QWidget):
         msg.exec_()
 
 
-def main(callback):
+def _main(callback):
     app = QApplication(sys.argv)
 
     window = MainWindow(callback)
 
     window.show()
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    _main(main._process_file)

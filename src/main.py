@@ -1,9 +1,14 @@
-import os
+def fix_click_error():
+    import os
 
-os.environ["LC_ALL"] = "en_US.UTF-8"
-os.environ["LANG"] = "en_US.UTF-8"
+    os.environ["LC_ALL"] = "en_US.UTF-8"
+    os.environ["LANG"] = "en_US.UTF-8"
+
+
+fix_click_error()
 
 import io
+import typing
 from pathlib import Path
 
 import click
@@ -13,11 +18,6 @@ from reportlab.pdfgen import canvas
 
 import pdf_splitter
 import question_splitter
-
-
-@click.group()
-def cli():
-    pass
 
 
 def create_textbox_in_page(
@@ -37,7 +37,7 @@ def create_textbox_in_page(
     return text_page
 
 
-@cli.command()
+@click.command()
 @click.argument("input")
 @click.option(
     "--output",
@@ -49,7 +49,9 @@ def process_file(input: str, output: str, header: str):
     return _process_file(input, output, header)
 
 
-def _process_file(input: str, output: str = None, header: str = None):
+def _process_file(
+    input: str, output: typing.Optional[str] = None, header: typing.Optional[str] = None
+):
     path = Path(input)
 
     # create folder
@@ -81,13 +83,7 @@ def _process_file(input: str, output: str = None, header: str = None):
             output_pdf.write(f)
 
 
-@cli.command()
-def gui():
-    import gui
-
-    gui.main(callback=_process_file)
-
-
 if __name__ == "__main__":
     # process_file()
-    gui()
+    # gui()
+    process_file()
