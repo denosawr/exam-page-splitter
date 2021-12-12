@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import *
 
 class FileProcessThread(QtCore.QThread):
     progress = QtCore.pyqtSignal(int)
+    error_signal = QtCore.pyqtSignal(str)
     files: list[str]
 
     def __init__(self, files: list[str], callback):
@@ -19,10 +20,16 @@ class FileProcessThread(QtCore.QThread):
         self.wait()
 
     def run(self):
-        for idx, file in enumerate(self.files):
-            self.callback(file)
+        try:
+            for idx, file in enumerate(self.files):
+                self.callback(file)
 
-            self.progress.emit(idx)
+                self.progress.emit(idx)
+        except Exception:
+            import traceback
+
+            exc = traceback.format_exc()
+            self.error_signal.emit(exc)
 
 
 class EditableList(QListWidget):
@@ -142,6 +149,7 @@ class MainWindow(QWidget):
         self.process_thread = FileProcessThread(self.files_to_progress, self.callback)
 
         self.process_thread.progress.connect(self.update_progress_bar)
+        self.process_thread.error_signal.connect(self.display_error_dialog)
         self.process_thread.start()
         self.update_progress_bar(-1)
 
@@ -157,6 +165,17 @@ class MainWindow(QWidget):
         except IndexError:
             self.progress.setValue(100)
             self.progressLabel.setText("Done")
+
+    def display_error_dialog(self, err: str):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Critical)
+        msg.setText("An error occurred...")
+        msg.setInformativeText(err)
+        msg.setWindowTitle("Error")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.buttonClicked.connect(sys.exit)
+
+        msg.exec_()
 
 
 def main(callback):
