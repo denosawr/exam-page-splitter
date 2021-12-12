@@ -1,5 +1,4 @@
 import io
-import sys
 from pathlib import Path
 
 import click
@@ -9,6 +8,11 @@ from reportlab.pdfgen import canvas
 
 import pdf_splitter
 import question_splitter
+
+
+@click.group()
+def cli():
+    pass
 
 
 def create_textbox_in_page(
@@ -28,7 +32,7 @@ def create_textbox_in_page(
     return text_page
 
 
-@click.command()
+@cli.command()
 @click.argument("input")
 @click.option(
     "--output",
@@ -37,6 +41,10 @@ def create_textbox_in_page(
 )
 @click.option("--header", default=None, help="The header text of every processed file.")
 def process_file(input: str, output: str, header: str):
+    return _process_file(input, output, header)
+
+
+def _process_file(input: str, output: str = None, header: str = None):
     path = Path(input)
 
     # create folder
@@ -69,5 +77,13 @@ def process_file(input: str, output: str, header: str):
             output_pdf.write(f)
 
 
+@cli.command()
+def gui():
+    import gui
+
+    gui.main(callback=_process_file)
+
+
 if __name__ == "__main__":
-    process_file()
+    # process_file()
+    cli()
