@@ -48,7 +48,6 @@ def _process_file(input: str, output: str = None, header: str = None):
     path = Path(input)
 
     # create folder
-
     if output:
         folder = Path(output)
         folder.mkdir(exist_ok=True)

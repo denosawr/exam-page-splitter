@@ -1,6 +1,7 @@
 import functools
 import itertools
 import re
+import statistics
 import typing
 from dataclasses import dataclass
 
@@ -25,6 +26,7 @@ class LabelMatchStore:
     next_page: list[MatchLTTextLine]
     end_of_section: list[MatchLTTextLine]
     question_continued: list[MatchLTTextLine]
+    header: list[MatchLTTextLine]
 
 
 T = typing.TypeVar("T")
@@ -92,6 +94,7 @@ def split_question(file: str) -> typing.Mapping[int, list[PageData]]:
     SEARCH_FOR_QUESTION_CONTINUED = re.compile(r"Question (\d+ con)", re.IGNORECASE)
     SEARCH_FOR_NEXT_PAGE_REGEX = re.compile(r"See (next) page", re.IGNORECASE)
     SEARCH_FOR_END_OF_SECTION = re.compile(r"End (of)(?! this booklet)", re.IGNORECASE)
+    SEARCH_FOR_HEADER = re.compile(r"(Specialist)", re.IGNORECASE)
 
     f = PDFTextFinder(file)
     labels = LabelMatchStore(
@@ -99,13 +102,15 @@ def split_question(file: str) -> typing.Mapping[int, list[PageData]]:
         f.find_matches(SEARCH_FOR_NEXT_PAGE_REGEX),
         f.find_matches(SEARCH_FOR_END_OF_SECTION),
         f.find_matches(SEARCH_FOR_QUESTION_CONTINUED),
+        f.find_matches(SEARCH_FOR_HEADER),
     )
     f.close()
 
     TOP_OF_PAGE = max(k.y2 for k in labels.question)
     BOTTOM_OF_PAGE = min(k.y2 for k in labels.next_page) if labels.next_page else 0
+    HEADER_START = statistics.mode(k.y1 for k in labels.header)
 
-    DEFAULT_VIEWPORT = Viewport(TOP_OF_PAGE + 20, BOTTOM_OF_PAGE)
+    DEFAULT_VIEWPORT = Viewport(min(TOP_OF_PAGE + 20, HEADER_START), BOTTOM_OF_PAGE)
     # add 20 to the default viewport in case an equation sticks out above the line
 
     values = functools.reduce(
