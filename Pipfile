@@ -16,6 +16,7 @@ main = "python src/main.py"
 [dev-packages]
 black = "*"
 pyright = "*"
+pyinstaller = "*"
 
 [requires]
 python_version = "3.10"

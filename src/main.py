@@ -1,3 +1,8 @@
+import os
+
+os.environ["LC_ALL"] = "en_US.UTF-8"
+os.environ["LANG"] = "en_US.UTF-8"
+
 import io
 from pathlib import Path
 
@@ -85,4 +90,4 @@ def gui():
 
 if __name__ == "__main__":
     # process_file()
-    cli()
+    gui()
