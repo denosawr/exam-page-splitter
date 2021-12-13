@@ -46,6 +46,8 @@ class FileProcessThread(QtCore.QThread):
             import traceback
 
             exc = traceback.format_exc()
+            sys.stderr.write(exc + "\n")
+            sys.stderr.flush()
             self.error_signal.emit(exc)
 
 
@@ -181,7 +183,7 @@ class MainWindow(QWidget):
         try:
             next_file = self.files_to_progress[progress_idx + 1]
             self.progressLabel.setText(
-                f"> {Path(next_file).stem} ({progress_idx+1}/{len(self.files_to_progress)})"
+                f"> {Path(next_file).stem} ({progress_idx+1} / {len(self.files_to_progress)})"
             )
         except IndexError:
             self.progress.setValue(100)
