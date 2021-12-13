@@ -102,7 +102,7 @@ class PDFTextFinder:
 
                 print(
                     f"{PDFTextFinder.get_optional_bbox(o)} "
-                    f"{question_box.result} f{text}"
+                    f"{question_box.result}\t{text}"
                 )
 
         if isinstance(o, typing.Iterable):
