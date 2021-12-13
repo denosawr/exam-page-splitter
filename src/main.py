@@ -79,7 +79,7 @@ def extract_questions_from_file(
             new_page.mergePage(text_page)
 
             output_pdf.addPage(new_page)
-        with open(folder / (str(question) + ".pdf"), "wb") as f:
+        with open(folder / (f"{question} ({path.stem}).pdf"), "wb") as f:
             output_pdf.write(f)
 
 

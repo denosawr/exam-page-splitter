@@ -89,7 +89,7 @@ def _reduce_func(
 def split_question(file: str) -> typing.Mapping[int, list[PageData]]:
     "Split a file into its component questions"
 
-    SEARCH_FOR_QUESTION_REGEX = re.compile(r"Question (\d+)(?! con)", re.IGNORECASE)
+    SEARCH_FOR_QUESTION_REGEX = re.compile(r"Question (\d+)(?!\d* con)", re.IGNORECASE)
     #                            group question number ^ |  ^ negative lookahead for "continued..."
     SEARCH_FOR_QUESTION_CONTINUED = re.compile(r"Question (\d+ con)", re.IGNORECASE)
     SEARCH_FOR_NEXT_PAGE_REGEX = re.compile(r"See (next) page", re.IGNORECASE)

@@ -100,7 +100,10 @@ class PDFTextFinder:
                 question_box = MatchLTTextLine(*bbox, page, num)
                 collection.append(question_box)
 
-                print(f"{PDFTextFinder.get_optional_bbox(o)} " f"{question_box.result}")
+                print(
+                    f"{PDFTextFinder.get_optional_bbox(o)} "
+                    f"{question_box.result} f{text}"
+                )
 
         if isinstance(o, typing.Iterable):
             o_casted = typing.cast(typing.Iterable[LTObject], o)
