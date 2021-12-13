@@ -46,10 +46,10 @@ def create_textbox_in_page(
 )
 @click.option("--header", default=None, help="The header text of every processed file.")
 def process_file(input: str, output: str, header: str):
-    return _process_file(input, output, header)
+    return extract_questions_from_file(input, output, header)
 
 
-def _process_file(
+def extract_questions_from_file(
     input: str, output: typing.Optional[str] = None, header: typing.Optional[str] = None
 ):
     path = Path(input)

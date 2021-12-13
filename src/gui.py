@@ -3,7 +3,20 @@ import typing
 from pathlib import Path
 
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 import main
 
@@ -66,7 +79,7 @@ class EditableList(QListWidget):
         if e.key() in {QtCore.Qt.Key_Delete, QtCore.Qt.Key_Backspace}:
             self.deleteCurrentItem()
 
-    def deleteCurrentItem(self, *args, **kwargs) -> None:  # type: ignore
+    def deleteCurrentItem(self, _clicked: typing.Optional[bool] = None) -> None:  # type: ignore
         for item in self.selectedItems():
             self.takeItem(self.row(item))
 
@@ -85,27 +98,23 @@ class MainWindow(QWidget):
         self.setWindowTitle("Exam Splitter")
         self.setAcceptDrops(True)
 
-        self.main_layout = QVBoxLayout()
-
         title = QLabel("<h1>WACE Exam Splitter</h1>", parent=self)
 
         self.files_list = EditableList(self)
-        # allow files list to expand
+
+        # allow files list to expand to fit window size
         self.files_list.setSizePolicy(
             QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         )
 
-        self.main_layout.addWidget(title)
-        self.main_layout.addWidget(QLabel("Files to process:"))
-        self.main_layout.addWidget(self.files_list)
-
-        addDeleteRow = QHBoxLayout()
+        # row for list manipulation buttons
         addButton = QPushButton("+")
         addButton.clicked.connect(self.prompt_file)
 
         deleteButton = QPushButton("-")
         deleteButton.clicked.connect(self.files_list.deleteCurrentItem)
 
+        addDeleteRow = QHBoxLayout()
         addDeleteRow.addWidget(
             QLabel("<i>You can drag and drop files into this window!</i>")
         )
@@ -113,12 +122,11 @@ class MainWindow(QWidget):
         addDeleteRow.addWidget(addButton)
         addDeleteRow.addWidget(deleteButton)
 
-        self.main_layout.addLayout(addDeleteRow)
-
         self.progress = QProgressBar(self)
-        self.main_layout.addWidget(self.progress)
 
+        # Row 3
         confirmRow = QHBoxLayout()
+
         self.progressLabel = QLabel()
         startButton = QPushButton("Start")
         closeButton = QPushButton("Close")
@@ -131,13 +139,21 @@ class MainWindow(QWidget):
         confirmRow.addWidget(startButton)
         confirmRow.addWidget(closeButton)
 
+        # Add all to main layout
+        self.main_layout = QVBoxLayout()
+
+        self.main_layout.addWidget(title)
+        self.main_layout.addWidget(QLabel("Files to process:"))
+        self.main_layout.addWidget(self.files_list)
+
+        self.main_layout.addLayout(addDeleteRow)
+        self.main_layout.addWidget(self.progress)
         self.main_layout.addLayout(confirmRow)
         # self.main_layout.addStretch()
 
         self.setLayout(self.main_layout)
 
-    def prompt_file(self, event):
-        print(type(event))
+    def prompt_file(self, _checked: bool) -> None:
         files, _ = QFileDialog.getOpenFileNames(
             self, "Add PDF files", "", "PDF documents (*.pdf)"
         )
@@ -145,7 +161,7 @@ class MainWindow(QWidget):
         for file in files:
             self.files_list.addEditableItem(file)
 
-    def process_files(self, event):
+    def process_files(self, _checked: bool) -> None:
         self.progressLabel.setText("Starting...")
         self.files_to_progress = [
             self.files_list.item(i).text() for i in range(self.files_list.count())
@@ -157,10 +173,11 @@ class MainWindow(QWidget):
         self.process_thread.start()
         self.update_progress_bar(-1)
 
-    def update_progress_bar(self, progress_idx: int):
+    def update_progress_bar(self, progress_idx: int) -> None:
         self.progress.setValue(
             int((progress_idx + 1) / len(self.files_to_progress) * 100)
         )
+
         try:
             next_file = self.files_to_progress[progress_idx + 1]
             self.progressLabel.setText(
@@ -170,19 +187,20 @@ class MainWindow(QWidget):
             self.progress.setValue(100)
             self.progressLabel.setText("Done")
 
-    def display_error_dialog(self, err: str):
+    def display_error_dialog(self, err: str) -> None:
         msg = QMessageBox()
+
         msg.setIcon(QMessageBox.Critical)
         msg.setText("An error occurred...")
         msg.setInformativeText(err)
         msg.setWindowTitle("Error")
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.buttonClicked.connect(sys.exit)
+        msg.buttonClicked.connect(sys.exit)  # type: ignore
 
         msg.exec_()
 
 
-def _main(callback):
+def _main(callback: typing.Callable[[str], None]):
     app = QApplication(sys.argv)
 
     window = MainWindow(callback)
@@ -192,4 +210,4 @@ def _main(callback):
 
 
 if __name__ == "__main__":
-    _main(main._process_file)
+    _main(main.extract_questions_from_file)
